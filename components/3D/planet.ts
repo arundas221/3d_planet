@@ -6,7 +6,11 @@ import atmosphereVertex from "../shaders/atmosphere/vertex.glsl";
 import atmosphereFragment from "../shaders/atmosphere/fragment.glsl";
 import ScrollTrigger from "gsap/dist/ScrollTrigger"
 
-const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } => {
+interface PlanetOptions {
+  onIndiaClick?: () => void;
+}
+
+const initPlanet3D = (options?: PlanetOptions): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } => {
   const canvas = document.querySelector("canvas.planet-3D") as HTMLCanvasElement;
 
   // scene
@@ -143,6 +147,7 @@ const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } =
   let isHovered = false;
   let isDragging = false;
   let previousMouseX = 0;
+  let mouseDownTime = 0;
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2(-1, -1);
 
@@ -152,6 +157,7 @@ const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } =
     if (intersects.length > 0) {
       isDragging = true;
       previousMouseX = event.clientX;
+      mouseDownTime = Date.now();
     }
   });
 
@@ -167,6 +173,30 @@ const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } =
   });
 
   window.addEventListener("mouseup", () => {
+    const mouseUpTime = Date.now();
+    const clickDuration = mouseUpTime - mouseDownTime;
+
+    // If it's a quick click (not a long drag)
+    if (isDragging && clickDuration < 300) {
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(earth);
+      if (intersects.length > 0) {
+        const point = intersects[0];
+        if (point.uv) {
+          // UV to Lat/Long conversion
+          // Mapping: u (0 to 1) -> Long (-180 to 180)
+          // Mapping: v (0 to 1) -> Lat (-90 to 90)
+          const lng = (point.uv.x - 0.5) * 360;
+          const lat = (point.uv.y - 0.5) * 180;
+
+          // India Bounding Box Check (Approximate)
+          // Lat: 8 to 38, Long: 68 to 98
+          if (lat > 8 && lat < 38 && lng > 68 && lng < 98) {
+            options?.onIndiaClick?.();
+          }
+        }
+      }
+    }
     isDragging = false;
   });
 
@@ -206,5 +236,6 @@ const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } =
 
   return { scene, renderer };
 };
+
 
 export default initPlanet3D;
