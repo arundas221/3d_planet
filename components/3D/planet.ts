@@ -141,12 +141,33 @@ const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } =
     )
 
   let isHovered = false;
+  let isDragging = false;
+  let previousMouseX = 0;
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2(-1, -1);
+
+  window.addEventListener("mousedown", (event) => {
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(earth);
+    if (intersects.length > 0) {
+      isDragging = true;
+      previousMouseX = event.clientX;
+    }
+  });
 
   window.addEventListener("mousemove", (event) => {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    if (isDragging) {
+      const deltaX = event.clientX - previousMouseX;
+      currentRotation += deltaX * 0.005;
+      previousMouseX = event.clientX;
+    }
+  });
+
+  window.addEventListener("mouseup", () => {
+    isDragging = false;
   });
 
   let lastTime = 0;
@@ -157,12 +178,11 @@ const initPlanet3D = (): { scene: THREE.Scene, renderer: THREE.WebGLRenderer } =
     const deltaTime = time - lastTime;
     lastTime = time;
 
-    // Raycasting for precision hover
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObject(earth);
     isHovered = intersects.length > 0;
 
-    if (!isHovered) {
+    if (!isHovered && !isDragging) {
       currentRotation += deltaTime * 0.2;
     }
 
